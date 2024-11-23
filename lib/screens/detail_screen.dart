@@ -37,7 +37,10 @@ class DetailScreen extends StatelessWidget {
                       shape: BoxShape.circle,
                     ),
                     child: IconButton(
-                        onPressed: () {}, icon: const Icon(Icons.arrow_back)),
+                        onPressed: () {
+                          Navigator.pop(context);
+                        },
+                        icon: const Icon(Icons.arrow_back)),
                   ),
                 )
               ],
