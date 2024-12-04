@@ -6,6 +6,7 @@ import 'package:prj_candi_si51/screens/main_screen.dart';
 import 'package:prj_candi_si51/screens/profile_screen.dart';
 import 'package:prj_candi_si51/screens/search_screen.dart';
 import 'package:prj_candi_si51/screens/signin_screen.dart';
+import 'package:prj_candi_si51/screens/signup_screen.dart';
 
 void main() {
   runApp(const MyApp());
@@ -32,7 +33,12 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: MainScreen(),
-      // home: DetailScreen(candi: candiList[0]),
+      initialRoute: '/',
+      routes: {
+        '/homescreen': (context) => const HomeScreen(),
+        '/signin': (context) => SigninScreen(),
+        '/signup': (context) => const SignUpScreen()
+      },
     );
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SigninScreen extends StatefulWidget {
   SigninScreen({super.key});
@@ -15,10 +16,45 @@ class _SigninScreenState extends State<SigninScreen> {
   final TextEditingController _passwordController = TextEditingController();
 
   String _errorText = "";
-
   bool _isSignedIn = false;
-
   bool _obscurePassword = true;
+
+  void _signIn() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final String savedUsername = prefs.getString("username") ?? '';
+    final String savedPassword = prefs.getString("password") ?? '';
+    final String enteredUsername = _usernameController.text.trim();
+    final String enteredPassword = _passwordController.text.trim();
+
+    if (enteredUsername.isEmpty || enteredPassword.isEmpty) {
+      setState(() {
+        _errorText = "Nama Pengguna dan kata sandi harus diisi";
+      });
+    }
+
+    if (savedUsername.isEmpty || savedPassword.isEmpty) {
+      setState(() {
+        _errorText =
+            "Pengguna belum terdaftar, silahkan daftar terlebih dahulu";
+      });
+    }
+
+    if (enteredUsername == savedUsername && enteredPassword == savedPassword) {
+      _errorText = "";
+      _isSignedIn = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.of(context).popUntil((route) => route.isFirst);
+      });
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacementNamed(context, '/');
+      });
+    } else {
+      setState(() {
+        _errorText = "Nama pengguna atau sandi salah";
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -82,7 +118,10 @@ class _SigninScreenState extends State<SigninScreen> {
                             color: Colors.blue,
                             decoration: TextDecoration.underline,
                             fontSize: 16),
-                        recognizer: TapGestureRecognizer()..onTap = () {}),
+                        recognizer: TapGestureRecognizer()
+                          ..onTap = () {
+                            Navigator.pushNamed(context, '/signup');
+                          }),
                   ),
                 ],
               )),
