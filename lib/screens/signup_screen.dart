@@ -1,5 +1,9 @@
+import 'dart:ui';
+
+import 'package:encrypt/encrypt.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:encrypt/encrypt.dart' as encrypt;
 
 class SignUpScreen extends StatefulWidget {
   const SignUpScreen({super.key});
@@ -39,9 +43,21 @@ class _SignUpScreenState extends State<SignUpScreen> {
     // print('Nama Pengguna: $username');
     // print('Password: $password');
 
-    prefs.setString('fulname', name);
-    prefs.setString('username', username);
-    prefs.setString('password', password);
+    if (name.isNotEmpty && username.isNotEmpty && password.isNotEmpty) {
+      final key = encrypt.Key.fromLength(32);
+      final iv = encrypt.IV.fromLength(16);
+
+      final encrypter = encrypt.Encrypter(encrypt.AES(key));
+      final encryptedName = encrypter.encrypt(name, iv: iv);
+      final encryptedUserName = encrypter.encrypt(username, iv: iv);
+      final encryptedPassword = encrypter.encrypt(password, iv: iv);
+
+      prefs.setString('fulname', encryptedName.base64);
+      prefs.setString('username', encryptedUserName.base64);
+      prefs.setString('password', encryptedPassword.base64);
+      prefs.setString('key', key.base64);
+      prefs.setString('iv', iv.base64);
+    }
 
     Navigator.pushReplacementNamed(context, '/signin');
   }

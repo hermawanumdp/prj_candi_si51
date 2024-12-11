@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:encrypt/encrypt.dart' as encrypt;
 
 class SigninScreen extends StatefulWidget {
   SigninScreen({super.key});
@@ -19,40 +20,64 @@ class _SigninScreenState extends State<SigninScreen> {
   bool _isSignedIn = false;
   bool _obscurePassword = true;
 
+  Future<Map<String, String>> _retrieveAndDecryptDataFromPrefs(
+      SharedPreferences sharedPreferences) async {
+    final encryptedUsername = sharedPreferences.getString('username') ?? '';
+    final encryptedPassword = sharedPreferences.getString('password') ?? '';
+    final keyString = sharedPreferences.getString('key') ?? '';
+    final ivString = sharedPreferences.getString('iv') ?? '';
+
+    final encrypt.Key key = encrypt.Key.fromBase64(keyString);
+    final iv = encrypt.IV.fromBase64(ivString);
+
+    final encrypter = encrypt.Encrypter(encrypt.AES(key));
+    final decryptedUsername = encrypter.decrypt64(encryptedUsername, iv: iv);
+    final decryptedPassword = encrypter.decrypt64(encryptedPassword, iv: iv);
+
+    // Mengembalikan data terdekripsi
+    return {'username': decryptedUsername, 'password': decryptedPassword};
+  }
+
   void _signIn() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final String savedUsername = prefs.getString("username") ?? '';
-    final String savedPassword = prefs.getString("password") ?? '';
-    final String enteredUsername = _usernameController.text.trim();
-    final String enteredPassword = _passwordController.text.trim();
+    try {
+      final Future<SharedPreferences> prefsFuture =
+          SharedPreferences.getInstance();
+      final String username = _usernameController.text;
+      final String password = _passwordController.text;
 
-    if (enteredUsername.isEmpty || enteredPassword.isEmpty) {
-      setState(() {
-        _errorText = "Nama Pengguna dan kata sandi harus diisi";
-      });
-    }
-
-    if (savedUsername.isEmpty || savedPassword.isEmpty) {
-      setState(() {
-        _errorText =
-            "Pengguna belum terdaftar, silahkan daftar terlebih dahulu";
-      });
-    }
-
-    if (enteredUsername == savedUsername && enteredPassword == savedPassword) {
-      _errorText = "";
-      _isSignedIn = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.of(context).popUntil((route) => route.isFirst);
-      });
-
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        Navigator.pushReplacementNamed(context, '/');
-      });
-    } else {
-      setState(() {
-        _errorText = "Nama pengguna atau sandi salah";
-      });
+      print('Sign in attempt');
+      if (username.isNotEmpty && password.isNotEmpty) {
+        final SharedPreferences prefs = await prefsFuture;
+        final data = await _retrieveAndDecryptDataFromPrefs(prefs);
+        if (data.isNotEmpty) {
+          final decryptedUsername = data['username'];
+          final decryptedPassword = data['password'];
+          //print data setelah enkripsi !
+          if (username == decryptedUsername && password == decryptedPassword) {
+            _errorText = '';
+            _isSignedIn = true;
+            prefs.setBool('isSignedIn', true);
+            // Pemanggilan untuk menghapus semua halaman dalam tumpukan navigasi
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Navigator.of(context).popUntil((route) => route.isFirst);
+            });
+            // Sign in berhasil, navigasikan ke layar utama
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              Navigator.pushReplacementNamed(context, '/');
+            });
+            print('Sign in succeeded');
+          } else {
+            print('Username or password is incorrect');
+          }
+        } else {
+          print('No stored credentials found');
+        }
+      } else {
+        print('Username and password cannot be empty');
+        // Tambahkan pesan untuk kasus ketika username atau password kosong
+      }
+    } catch (e) {
+      print('An error occurred: $e');
     }
   }
 
@@ -106,7 +131,11 @@ class _SigninScreenState extends State<SigninScreen> {
                   SizedBox(
                     height: 20,
                   ),
-                  ElevatedButton(onPressed: () {}, child: Text('Sign In')),
+                  ElevatedButton(
+                      onPressed: () {
+                        _signIn();
+                      },
+                      child: Text('Sign In')),
                   //TODO 8 : TextButton Sign Up
                   // TextButton(
                   //     onPressed: () {},
